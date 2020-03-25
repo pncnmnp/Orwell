@@ -1,5 +1,6 @@
 from numpy.random import choice
 from os.path import isfile
+import tkinter as tk
 import json
 import pickle
 import pprint
@@ -26,11 +27,15 @@ class Words:
 
 class Game:
 	def __init__(self):
-		self.board = [	['z', 't', 'ar', 'c'], 
-						['z', '0', 'e', '0'], 
-						['z', '0', 'h', 'lg'], 
-						['0', '0', 't', '0']]
+		self.board = [	['0', '0', '0', '0'], 
+						['0', '0', '0', '0'], 
+						['0', '0', '0', '0'], 
+						['0', '0', '0', '0']]
 		self.score = 0
+		self.root = tk.Tk()		
+		self.root.title("Orwell")
+		self.root.bind("<KeyPress>", self.key)
+
 		self.ALPHABET_FREQ = "./words/freq.json"
 
 	def perform_move(self, l):
@@ -63,22 +68,24 @@ class Game:
 		return l
 
 	def key(self, event):
-		if event == "Right":
+		if event.keysym == "Right":
 			self.board = [self.perform_move(board) for board in self.board]
 
-		if event == "Left":
+		if event.keysym == "Left":
 			self.board = list(
 				map(lambda x: self.perform_move(x[::-1])[::-1], self.board))
 
-		if event == "Up":
+		if event.keysym == "Up":
 			transpose = lambda l_of_l:[list(l) for l in zip(*l_of_l)]
 			self.board = list(map(lambda x: self.perform_move(x[::-1])[::-1],transpose(self.board)))
 			self.board = transpose(self.board)
 
-		if event == "Down":
+		if event.keysym == "Down":
 			transpose = lambda l_of_l:[list(l) for l in zip(*l_of_l)]
 			self.board = list(map(self.perform_move,transpose(self.board)))
 			self.board = transpose(self.board)
+
+		self.display()
 
 	def spawn(self):
 		# Probability distribution
@@ -97,11 +104,52 @@ class Game:
 			self.board[index[0]][index[1]] = chr(num)
 			print(chr(num), index)
 
+	def display(self):
+		self.spawn()
+		for i in range(len(self.board)):
+			for j in range(len(self.board)):
+				colors = {0:"white", 1:"coral", 2:"tomato", 3:"orange red", 4:"red", 5:"red3", 
+				6:"red4", 7:"light goldenrod", 8:"goldenrod", 9:"dark goldenrod", 10:"indian red", 11:"gold"}
+
+				if self.board[i][j] == '0':
+					color = colors[0]
+				else:
+					color = colors[len(self.board[i][j])]
+
+				tk.Label(
+					self.root,
+					text=self.board[i][j],
+					height=3,
+					width=10,
+					borderwidth=3,
+					font = 'Helvetica 14 bold',
+					fg = "black",
+					bg = color,
+					relief="ridge").grid(
+						row=i, column=j)
+
+				self.root.update()
+
+		tk.Label(
+			self.root,
+			text="Score: "+str(self.score)+"\nHighest: "+str(0),
+			justify="left"
+		).grid(
+			row=5,
+			column=0,
+			sticky="nsew",
+			rowspan=4
+		)
+		
+		self.root.update()
+
 if __name__ == "__main__":
 	obj = Game()
-	pprint.pprint(obj.board)
-	for move in ["Up", "Down", "Left", "Right"]:
-		obj.key(move)
-		obj.spawn()
-		print()
-		pprint.pprint(obj.board)
+	# pprint.pprint(obj.board)
+	# for move in ["Up", "Down", "Left", "Right"]:
+	# 	obj.key(move)
+	# 	obj.spawn()
+	# 	print()
+	# 	pprint.pprint(obj.board)
+	obj.display()
+	obj.root.mainloop()	
