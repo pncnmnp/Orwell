@@ -1,6 +1,7 @@
 import json
 from os.path import isfile
 import pickle
+import pprint
 
 class Words:
 	def __init__(self):
@@ -23,7 +24,10 @@ class Words:
 
 class Game:
 	def __init__(self):
-		self.board = [['-', '-', '-', '-'], ['-', '-', '-', '-'], ['-', '-', '-', '-'], ['-', '-', '-', '-']]
+		self.board = [	['z', 't', 'ar', 'c'], 
+						['z', '0', 'e', '0'], 
+						['z', '0', 'h', 'lg'], 
+						['0', '0', 't', '0']]
 		self.score = 0
 
 	def perform_move(self, l):
@@ -53,11 +57,30 @@ class Game:
 			if l[i] == '0':
 				del l[i]
 				l.insert(0, '0')
-		return l		
+		return l
 
+	def key(self, event):
+		if event == "Right":
+			self.board = [self.perform_move(board) for board in self.board]
 
+		if event == "Left":
+			self.board = list(
+				map(lambda x: self.perform_move(x[::-1])[::-1], self.board))
+
+		if event == "Up":
+			transpose = lambda l_of_l:[list(l) for l in zip(*l_of_l)]
+			self.board = list(map(lambda x: self.perform_move(x[::-1])[::-1],transpose(self.board)))
+			self.board = transpose(self.board)
+
+		if event == "Down":
+			transpose = lambda l_of_l:[list(l) for l in zip(*l_of_l)]
+			self.board = list(map(self.perform_move,transpose(self.board)))
+			self.board = transpose(self.board)
 
 if __name__ == "__main__":
-	obj = Words()
-	l = obj.pickle_word_list()
-	print("india" in l)
+	obj = Game()
+	pprint.pprint(obj.board)
+	for move in ["Up", "Down", "Left", "Right"]:
+		obj.key(move)
+		print()
+		pprint.pprint(obj.board)
