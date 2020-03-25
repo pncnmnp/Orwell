@@ -1,7 +1,9 @@
-import json
+from numpy.random import choice
 from os.path import isfile
+import json
 import pickle
 import pprint
+import random
 
 class Words:
 	def __init__(self):
@@ -29,6 +31,7 @@ class Game:
 						['z', '0', 'h', 'lg'], 
 						['0', '0', 't', '0']]
 		self.score = 0
+		self.ALPHABET_FREQ = "./words/freq.json"
 
 	def perform_move(self, l):
 		word_list = Words().pickle_word_list()
@@ -77,10 +80,28 @@ class Game:
 			self.board = list(map(self.perform_move,transpose(self.board)))
 			self.board = transpose(self.board)
 
+	def spawn(self):
+		# Probability distribution
+		freq = json.load(open(self.ALPHABET_FREQ))
+		p = [x/sum(list(freq.values())) for x in list(freq.values())]
+		num = choice([ord(x) for x in freq.keys()], p = p)
+
+		index = [(i, j) for i in range(len(self.board))
+				 for j in range(len(self.board))
+				 ]  # Generate all possible rows and columns
+		index = list(filter(lambda x: self.board[x[0]][x[1]] == '0',
+							index))  # Filter out non zero rows
+
+		if len(index) > 0:
+			index = random.choice(index)
+			self.board[index[0]][index[1]] = chr(num)
+			print(chr(num), index)
+
 if __name__ == "__main__":
 	obj = Game()
 	pprint.pprint(obj.board)
 	for move in ["Up", "Down", "Left", "Right"]:
 		obj.key(move)
+		obj.spawn()
 		print()
 		pprint.pprint(obj.board)
