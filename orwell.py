@@ -1,6 +1,8 @@
 from numpy.random import choice
 from os.path import isfile
 from functools import partial
+from sys import exit
+from itertools import chain 
 import tkinter as tk
 import json
 import pickle
@@ -9,8 +11,8 @@ import random
 
 class Words:
 	def __init__(self):
-		self.WORDS_PATH = "./words/words.json"
-		self.WORDS_COMPRESS = "./words/words.pkl"
+		self.WORDS_PATH = "./words/dictionary.json"
+		self.WORDS_COMPRESS = "./words/dictionary.pkl"
 
 	def load_words(self):
 		return json.load(open(self.WORDS_PATH))
@@ -25,6 +27,10 @@ class Words:
 			model = pickle.load(open(self.WORDS_COMPRESS, 'rb'))
 
 		return model
+
+class TempEvent:
+	def __init__(self, value):
+		self.keysym = value
 
 class Game:
 	def __init__(self):
@@ -89,7 +95,10 @@ class Game:
 				l.insert(0, '0')
 		return l
 
-	def key(self, event):
+	def key(self, event, to_display=True):
+		if to_display == False:
+			old_board = self.board
+
 		if event.keysym == "Right":
 			self.board = [self.perform_move(board) for board in self.board]
 
@@ -105,9 +114,14 @@ class Game:
 		if event.keysym == "Down":
 			transpose = lambda l_of_l:[list(l) for l in zip(*l_of_l)]
 			self.board = list(map(self.perform_move,transpose(self.board)))
-			self.board = transpose(self.board)
+			self.board = transpose(self.board)	
 
-		self.display()
+		if to_display:
+			self.display()
+		else:
+			new_board = self.board
+			self.board = old_board
+			return new_board
 
 	def spawn(self):
 		# Probability distribution
@@ -124,6 +138,13 @@ class Game:
 			index = random.choice(index)
 			self.board[index[0]][index[1]] = chr(num)
 			print(chr(num), index)
+
+		elif self.game_over_check() == True:
+			self.game_over()
+			exit(0)
+
+		else:
+			pass
 
 	def display(self, after_click=False):
 		if after_click == False:
@@ -167,6 +188,26 @@ class Game:
 		)
 		
 		self.root.update()
+
+	def game_over_check(self):
+		if (self.key(TempEvent("Left"), to_display=False) 
+			== self.key(TempEvent("Left"), to_display=False) 
+			== self.key(TempEvent("Left"), to_display=False) 
+			== self.key(TempEvent("Left"), to_display=False)):
+			if len([1 for word in list(chain.from_iterable(self.board)) if len(word) > 1]) == 0:
+				return True
+		else:
+			return False
+
+	def game_over(self):
+		text = "Game Over! Your score is: " + str(self.score)
+		popup = tk.Tk()
+		popup.wm_title("Game Over!")
+		label = tk.Label(popup, text = text)
+		label.pack()
+		exitButton = tk.Button(popup, text = "Exit", command = popup.destroy)
+		exitButton.pack()
+		self.root.wait_window(popup)
 
 if __name__ == "__main__":
 	obj = Game()
