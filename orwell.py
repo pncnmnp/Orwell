@@ -10,6 +10,7 @@ import json
 import pickle
 import pprint
 import random
+import re
 
 class Words:
 	def __init__(self):
@@ -36,20 +37,35 @@ class TempEvent:
 
 class Game:
 	def __init__(self):
-		self.board = [	['0', '0', '0', '0'], 
-						['0', '0', '0', '0'], 
-						['0', '0', '0', '0'], 
-						['0', '0', '0', '0']]
+		self.board = [	['-', '-', '-', '-'], 
+						['-', '-', '-', '-'], 
+						['-', '-', '-', '-'], 
+						['-', '-', '-', '-']]
 		self.score = 0
 		self.root = tk.Tk()		
 		self.root.title("Orwell")
 		self.root.bind("<KeyPress>", self.key)
 
 		self.ALPHABET_FREQ = "./words/freq.json"
-		self.word_list = Words().pickle_word_list()
 		self.freq = json.load(open(self.ALPHABET_FREQ))
+
+		self.word_list = Words().pickle_word_list()
+
 		self.highscorefile = "./highscore.csv"
 		self.highscore = self.get_high_score()
+
+		self.MEANINGS_PATH = "./words/meanings.json"
+		self.meanings = json.load(open(self.MEANINGS_PATH))
+
+		self.meaning_label = tk.Label(
+			self.root,
+			text="",
+			font='Times 9',
+			justify="left",
+			wraplength=300
+		)
+		self.meaning_label.grid(row=10, column=0, sticky="s", columnspan=4)
+
 
 	def get_high_score(self):
 		with open(self.highscorefile, 'r') as w:
@@ -74,34 +90,35 @@ class Game:
 			self.score += len(self.board[x][y])*100
 			self.adjust_frequency(self.board[x][y])
 			# print(self.freq)
-			self.board[x][y] = '0'
-			self.display(after_click=True)
+			old_word = self.board[x][y]
+			self.board[x][y] = '-'
+			self.display(after_click=True, old_word=old_word)
 
 	def perform_move(self, l):
-		# Throws '0' values on the left
-		# eg - ['ar', '0', '0', 'c'] -> ['0', '0', 'ar', 'c']
+		# Throws '-' values on the left
+		# eg - ['ar', '-', '-', 'c'] -> ['-', '-', 'ar', 'c']
 		for i in range(len(l)):
-			if l[i] == '0':
+			if l[i] == '-':
 				del l[i]
-				l.insert(0, '0')
+				l.insert(0, '-')
 
-		# If all zeros (i.e. ['0', '0', '0', '0']), then return the list
+		# If all zeros (i.e. ['-', '-', '-', '-']), then return the list
 		if l.count(0) >= 3:
 			return l
 
 		# If a combination in dictionary, merge the words
-		# ['0', '0', 'ar', 'c'] -> ['0', '0', '0', 'arc']
+		# ['-', '-', 'ar', 'c'] -> ['-', '-', '-', 'arc']
 		n = l[1:]
 		for i in range(len(l) - 1):
 			if l[i]+n[i] in self.word_list:
 				l[i] += n[i]
-				l[i + 1] = '0'
+				l[i + 1] = '-'
 
-		# Again throws '0' values on the left
+		# Again throws '-' values on the left
 		for i in range(len(l)):
-			if l[i] == '0':
+			if l[i] == '-':
 				del l[i]
-				l.insert(0, '0')
+				l.insert(0, '-')
 		return l
 
 	def key(self, event, to_display=True):
@@ -140,7 +157,7 @@ class Game:
 		index = [(i, j) for i in range(len(self.board))
 				 for j in range(len(self.board))
 				 ]  # Generate all possible rows and columns
-		index = list(filter(lambda x: self.board[x[0]][x[1]] == '0',
+		index = list(filter(lambda x: self.board[x[0]][x[1]] == '-',
 							index))  # Filter out non zero rows
 
 		if len(index) > 0:
@@ -161,7 +178,7 @@ class Game:
 		else:
 			pass
 
-	def display(self, after_click=False):
+	def display(self, after_click=False, old_word=None):
 		if after_click == False:
 			self.spawn()
 
@@ -170,7 +187,7 @@ class Game:
 				colors = {0:"white", 1:"coral", 2:"tomato", 3:"orange red", 4:"red", 5:"red3", 
 				6:"red4", 7:"light goldenrod", 8:"goldenrod", 9:"dark goldenrod", 10:"indian red", 11:"gold"}
 
-				if self.board[i][j] == '0':
+				if self.board[i][j] == '-':
 					color = colors[0]
 				else:
 					color = colors[len(self.board[i][j])]
@@ -200,12 +217,30 @@ class Game:
 
 		tk.Label(
 			self.root,
-			text="Always Remember - \nMoving tile goes ahead of the still tile",
+			text="Remember - \nMoving tile goes ahead of the still tile",
 			font='Helvetica 10 bold',
 			justify="center"
 		).grid(row=5, column=1, sticky="nsew", columnspan=4)		
 		
+		if after_click:
+			try:
+				meaning = self.find_meaning(old_word)
+				self.meaning_label.config(text=str(old_word).upper() + ": " + meaning)
+			except:
+				self.meaning_label['text'] = ""
+
 		self.root.update()
+
+	def find_meaning(self, old_word):
+		full_text = self.meanings[old_word]
+		if len(full_text) <= 10:
+			return None
+		meanings = [meaning.replace("\n", "").strip() for meaning in re.split('[0-9][.]', full_text) if meaning != "" and len(meaning) >= 5]
+
+		# Adding '1.', '2.' ahead of the meanings
+		meanings = [str(index + 1) + ". " + meanings[index] for index in range(len(meanings))]
+
+		return "\n".join(meanings[:2])
 
 	def game_over_check(self):
 		if (self.key(TempEvent("Left"), to_display=False) 
@@ -223,7 +258,7 @@ class Game:
 		popup.wm_title("Game Over!")
 		label = tk.Label(popup, text = text)
 		label.pack()
-		exitButton = tk.Button(popup, text = "Exit", command = popup.destroy)
+		exitButton = tk.Button(popup, text = "Exit", command = self.root.destroy)
 		exitButton.pack()
 		self.root.wait_window(popup)
 
