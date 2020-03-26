@@ -2,8 +2,10 @@ from numpy.random import choice
 from os.path import isfile
 from functools import partial
 from sys import exit
-from itertools import chain 
+from itertools import chain
+from csv import reader
 import tkinter as tk
+import datetime
 import json
 import pickle
 import pprint
@@ -46,6 +48,13 @@ class Game:
 		self.ALPHABET_FREQ = "./words/freq.json"
 		self.word_list = Words().pickle_word_list()
 		self.freq = json.load(open(self.ALPHABET_FREQ))
+		self.highscorefile = "./highscore.csv"
+		self.highscore = self.get_high_score()
+
+	def get_high_score(self):
+		with open(self.highscorefile, 'r') as w:
+			read = reader(w)
+			return max(int(col[1].replace(',', '')) for col in read)
 
 	def adjust_frequency(self, word):
 		alphas = [1 if chr(w+97) in word else 0 for w in range(26)]
@@ -64,7 +73,7 @@ class Game:
 		if self.board[x][y] in self.word_list:
 			self.score += len(self.board[x][y])*100
 			self.adjust_frequency(self.board[x][y])
-			print(self.freq)
+			# print(self.freq)
 			self.board[x][y] = '0'
 			self.display(after_click=True)
 
@@ -137,10 +146,16 @@ class Game:
 		if len(index) > 0:
 			index = random.choice(index)
 			self.board[index[0]][index[1]] = chr(num)
-			print(chr(num), index)
+			# print(chr(num), index)
 
 		elif self.game_over_check() == True:
 			self.game_over()
+
+			# Append the current score in the highscore file
+			date = datetime.datetime.now().strftime("%d/%m/%y")
+			with open(self.highscorefile, 'a') as w:
+				w.write(date+','+str(self.score)+'\n')
+
 			exit(0)
 
 		else:
@@ -163,8 +178,8 @@ class Game:
 				tk.Button(
 					self.root,
 					text=self.board[i][j],
-					height=3,
-					width=10,
+					height=2,
+					width=6,
 					borderwidth=3,
 					activebackground="#D3D3D3",
 					font = 'Helvetica 14 bold',
@@ -178,14 +193,17 @@ class Game:
 
 		tk.Label(
 			self.root,
-			text="Score: "+str(self.score)+"\nHighest: "+str(0),
+			text="Score: "+str(self.score)+"\nHighest: "+str(self.highscore),
+			font='Helvetica 10 bold',
 			justify="left"
-		).grid(
-			row=5,
-			column=0,
-			sticky="nsew",
-			rowspan=4
-		)
+		).grid(row=5, column=0, sticky="nsew", rowspan=4)
+
+		tk.Label(
+			self.root,
+			text="Always Remember - \nMoving tile goes ahead of the still tile",
+			font='Helvetica 10 bold',
+			justify="center"
+		).grid(row=5, column=1, sticky="nsew", columnspan=4)		
 		
 		self.root.update()
 
