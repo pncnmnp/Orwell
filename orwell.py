@@ -1,5 +1,6 @@
 from numpy.random import choice
 from os.path import isfile
+from functools import partial
 import tkinter as tk
 import json
 import pickle
@@ -37,10 +38,15 @@ class Game:
 		self.root.bind("<KeyPress>", self.key)
 
 		self.ALPHABET_FREQ = "./words/freq.json"
+		self.word_list = Words().pickle_word_list()
+
+	def click(self, x, y, text):
+		if self.board[x][y] in self.word_list:
+			self.score += len(self.board[x][y])*100
+			self.board[x][y] = '0'
+			self.display(after_click=True)
 
 	def perform_move(self, l):
-		word_list = Words().pickle_word_list()
-
 		# Throws '0' values on the left
 		# eg - ['ar', '0', '0', 'c'] -> ['0', '0', 'ar', 'c']
 		for i in range(len(l)):
@@ -56,7 +62,7 @@ class Game:
 		# ['0', '0', 'ar', 'c'] -> ['0', '0', '0', 'arc']
 		n = l[1:]
 		for i in range(len(l) - 1):
-			if l[i]+n[i] in word_list:
+			if l[i]+n[i] in self.word_list:
 				l[i] += n[i]
 				l[i + 1] = '0'
 
@@ -104,8 +110,10 @@ class Game:
 			self.board[index[0]][index[1]] = chr(num)
 			print(chr(num), index)
 
-	def display(self):
-		self.spawn()
+	def display(self, after_click=False):
+		if after_click == False:
+			self.spawn()
+
 		for i in range(len(self.board)):
 			for j in range(len(self.board)):
 				colors = {0:"white", 1:"coral", 2:"tomato", 3:"orange red", 4:"red", 5:"red3", 
@@ -116,16 +124,18 @@ class Game:
 				else:
 					color = colors[len(self.board[i][j])]
 
-				tk.Label(
+				tk.Button(
 					self.root,
 					text=self.board[i][j],
 					height=3,
 					width=10,
 					borderwidth=3,
+					activebackground="#D3D3D3",
 					font = 'Helvetica 14 bold',
 					fg = "black",
 					bg = color,
-					relief="ridge").grid(
+					relief="ridge",
+					command=partial(self.click, i, j, self.board[i][j])).grid(
 						row=i, column=j)
 
 				self.root.update()
