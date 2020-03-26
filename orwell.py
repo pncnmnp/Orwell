@@ -39,10 +39,26 @@ class Game:
 
 		self.ALPHABET_FREQ = "./words/freq.json"
 		self.word_list = Words().pickle_word_list()
+		self.freq = json.load(open(self.ALPHABET_FREQ))
+
+	def adjust_frequency(self, word):
+		alphas = [1 if chr(w+97) in word else 0 for w in range(26)]
+		reduce_indexes = [index for index in range(26) if alphas[index]==1]
+		increase_indexes = [index for index in range(26) if alphas[index]==0]
+
+		for ri in reduce_indexes:
+			CONSTANT = (self.freq[chr(ri+97)]/100)*10
+			self.freq[chr(ri+97)] -= CONSTANT
+			total_incr = sum([self.freq[chr(ii+97)] for ii in increase_indexes])
+
+			for ii in increase_indexes:
+				self.freq[chr(ii+97)] += CONSTANT*(self.freq[chr(ii+97)]/total_incr)
 
 	def click(self, x, y, text):
 		if self.board[x][y] in self.word_list:
 			self.score += len(self.board[x][y])*100
+			self.adjust_frequency(self.board[x][y])
+			print(self.freq)
 			self.board[x][y] = '0'
 			self.display(after_click=True)
 
@@ -95,9 +111,8 @@ class Game:
 
 	def spawn(self):
 		# Probability distribution
-		freq = json.load(open(self.ALPHABET_FREQ))
-		p = [x/sum(list(freq.values())) for x in list(freq.values())]
-		num = choice([ord(x) for x in freq.keys()], p = p)
+		p = [x/sum(list(self.freq.values())) for x in list(self.freq.values())]
+		num = choice([ord(x) for x in self.freq.keys()], p = p)
 
 		index = [(i, j) for i in range(len(self.board))
 				 for j in range(len(self.board))
