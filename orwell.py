@@ -4,6 +4,7 @@ from functools import partial
 from sys import exit
 from itertools import chain
 from csv import reader
+from nltk.stem import WordNetLemmatizer
 import tkinter as tk
 import datetime
 import json
@@ -227,12 +228,16 @@ class Game:
 				meaning = self.find_meaning(old_word)
 				self.meaning_label.config(text=str(old_word).upper() + ": " + meaning)
 			except:
-				self.meaning_label['text'] = ""
+				self.meaning_label.config(text=str(old_word).upper() + ": No Meaning Found")
 
 		self.root.update()
 
 	def find_meaning(self, old_word):
-		full_text = self.meanings[old_word]
+		if old_word not in self.meanings:
+			full_text = self.meanings[WordNetLemmatizer().lemmatize(old_word)]
+		else:
+			full_text = self.meanings[old_word]
+
 		if len(full_text) <= 10:
 			return None
 		meanings = [meaning.replace("\n", "").strip() for meaning in re.split('[0-9][.]', full_text) if meaning != "" and len(meaning) >= 5]
